@@ -1,0 +1,10 @@
+{
+  "name": "achievements",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build -w packages/core && npm run build -w packages/cli",
+    "cli": "npm run start -w packages/cli",
+    "clean": "rm -rf packages/*/dist"
+  }
+}
