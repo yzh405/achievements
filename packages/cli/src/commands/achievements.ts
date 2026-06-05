@@ -106,17 +106,21 @@ function printCelebration(newlyUnlocked: AchievementEvalResult[]): void {
 function sendNotifications(newlyUnlocked: AchievementEvalResult[]): void {
   if (process.platform !== 'darwin') return;
 
+  const notifierApp = `${process.env.HOME}/.achievements/AchievementsNotifier.app`;
+
   for (const a of newlyUnlocked) {
     const title = `${a.icon} 成就解锁：${a.name}`;
     const body = a.description;
     try {
+      // Use compiled applet as sender so clicking notification doesn't open Script Editor
       execSync(
-        `osascript -e 'display notification "${body}" with title "${title}" sound name "Glass"'`,
-        { timeout: 3000, stdio: 'ignore' }
+        `open "${notifierApp}" --args '${title.replace(/'/g, "'\\''")}' '${body.replace(/'/g, "'\\''")}'`,
+        { timeout: 5000, stdio: 'ignore' }
       );
     } catch { /* ignore */ }
   }
 
+  // Play sound
   try {
     execSync('afplay /System/Library/Sounds/Glass.aiff', { timeout: 3000, stdio: 'ignore' });
   } catch { /* ignore */ }
