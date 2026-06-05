@@ -97,6 +97,13 @@ function sendNotifications(newlyUnlocked: AchievementEvalResult[]): void {
       // ignore notification errors (e.g., no GUI session in SSH)
     }
   }
+
+  // Play a celebratory sound via afplay (more reliable than notification sound)
+  try {
+    execSync('afplay /System/Library/Sounds/Glass.aiff', { timeout: 3000, stdio: 'ignore' });
+  } catch {
+    // ignore if sound file missing
+  }
 }
 
 /**
