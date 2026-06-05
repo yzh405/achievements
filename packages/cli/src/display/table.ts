@@ -1,7 +1,7 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
-import type { DayStats, ModelBreakdown, ProjectBreakdown, WeekStats, AchievementEvalResult } from '@achievements/core';
-import { formatNumber, formatDate, formatTokens, barChart, progressBar, achievementStatusIcon } from './format.js';
+import type { DayStats, ModelBreakdown, ProjectBreakdown, WeekStats, AchievementEvalResult, ActiveMission, LevelInfo } from '@achievements/core';
+import { formatNumber, formatDate, formatTokens, barChart, progressBar, achievementStatusIcon, tierColor, tierLabel, levelBar } from './format.js';
 
 /**
  * Render a daily stats table.
@@ -121,17 +121,18 @@ export function renderProjectTable(projects: ProjectBreakdown[]): string {
 }
 
 /**
- * Render achievements grouped by category with progress bars.
+ * Render achievements grouped by category and tier with progress bars.
  */
 export function renderAchievementTable(achievements: AchievementEvalResult[]): string {
   if (achievements.length === 0) return chalk.gray('  No achievements found.\n');
 
   const categoryLabels: Record<string, string> = {
     token_volume: '📊 Token Volume',
+    daily_volume: '⚡ Daily Volume',
     streak: '🔥 Streaks',
     model_variety: '🔍 Model Variety',
     project: '📁 Projects',
-    efficiency: '⚡ Efficiency',
+    efficiency: '💾 Efficiency',
   };
 
   const grouped = new Map<string, AchievementEvalResult[]>();
@@ -142,24 +143,38 @@ export function renderAchievementTable(achievements: AchievementEvalResult[]): s
   }
 
   const table = new Table({
-    head: ['', 'Achievement', 'Progress', 'Status'],
+    head: ['', 'Tier', 'Achievement', 'Progress', 'Status'],
     style: { head: ['cyan'] },
-    colWidths: [4, 20, 28, 8],
+    colWidths: [4, 8, 20, 24, 8],
     wordWrap: true,
   });
 
   for (const [category, items] of grouped) {
-    table.push([{ colSpan: 4, content: chalk.bold.cyan(categoryLabels[category] || category) }]);
+    table.push([{ colSpan: 5, content: chalk.bold.cyan(categoryLabels[category] || category) }]);
     for (const a of items) {
       const status = achievementStatusIcon(a.isNewlyUnlocked, a.progress, a.unlockedAt);
-      const name = a.unlockedAt !== null && a.unlockedAt !== 'in-progress'
+      const unlocked = a.unlockedAt !== null && a.unlockedAt !== 'in-progress';
+
+      // Hidden achievements: mask name/description until unlocked
+      const showHidden = a.visibility === 'hidden' && !unlocked;
+      const name = unlocked
         ? chalk.green(a.name)
-        : chalk.white(a.name);
-      const desc = chalk.gray(`  ${a.description}`);
+        : (showHidden ? chalk.gray('???') : chalk.white(a.name));
+      const desc = showHidden
+        ? chalk.gray('  🔒 隐藏成就')
+        : chalk.gray(`  ${a.description}`);
+      const tierStr = tierColor(a.tier, tierLabel(a.tier));
+
+      // For hidden achievements, show unlocked "!!!" instead of progress
+      const progressDisplay = showHidden
+        ? chalk.gray('???')
+        : progressBar(a.progress);
+
       table.push([
         a.icon,
+        tierStr,
         `${name}\n${desc}`,
-        progressBar(a.progress),
+        progressDisplay,
         status,
       ]);
     }
@@ -169,17 +184,51 @@ export function renderAchievementTable(achievements: AchievementEvalResult[]): s
 }
 
 /**
+ * Render weekly missions.
+ */
+export function renderMissionTable(missions: ActiveMission[]): string {
+  if (missions.length === 0) return '';
+
+  const table = new Table({
+    head: ['Mission', 'Progress', ''],
+    style: { head: ['cyan'] },
+    colWidths: [30, 24, 8],
+    wordWrap: true,
+  });
+
+  for (const m of missions) {
+    const status = m.completed ? '✅' : (m.progress > 0 ? '⬜' : '🔒');
+    table.push([
+      `${m.icon}  ${chalk.white(m.name)}\n${chalk.gray('  ' + m.description)}`,
+      progressBar(m.progress),
+      status,
+    ]);
+  }
+
+  return table.toString();
+}
+
+/**
+ * Render level display with XP bar.
+ */
+export function renderLevelDisplay(level: LevelInfo): string {
+  return `  ${chalk.bold.yellow(`⚡ Level ${level.level}`)} ${chalk.gray(level.title)}  ${levelBar(level.currentXp, level.xpToNext)}  ${chalk.yellow(`${level.currentXp}/${level.currentXp + level.xpToNext} XP`)}`;
+}
+
+/**
  * Render a compact achievement summary line for the dashboard.
  */
 export function renderAchievementSummary(
   totalUnlocked: number,
   totalAchievements: number,
+  unlockedVisible: number,
+  totalVisible: number,
   nextName: string | null,
   nextProgress: number | null
 ): string {
-  const summary = `🏆 Achievements: ${chalk.bold(`${totalUnlocked}/${totalAchievements}`)} unlocked`;
+  const summary = `🏆 Achievements: ${chalk.bold(`${unlockedVisible}/${totalVisible}`)} visible unlocked | ${chalk.gray(`${totalUnlocked}/${totalAchievements}`)} total`;
   if (nextName && nextProgress !== null) {
-    return `${summary}  |  ${chalk.gray('🔜 Next:')} ${chalk.cyan(nextName)} (${Math.round(nextProgress * 100)}%)`;
+    return `${summary}\n  ${chalk.gray('🔜 Next:')} ${chalk.cyan(nextName)} (${Math.round(nextProgress * 100)}%)`;
   }
   return summary;
 }

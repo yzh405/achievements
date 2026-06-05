@@ -82,3 +82,44 @@ export function achievementStatusIcon(
   if (progress > 0) return '⬜';
   return '🔒';
 }
+
+// ── Tier & Level formatting ────────────────────────────
+
+/** Tier display with color */
+export function tierLabel(tier: string): string {
+  const labels: Record<string, string> = {
+    bronze: '🥉 青铜',
+    silver: '🥈 白银',
+    gold: '🥇 黄金',
+    platinum: '💎 铂金',
+    diamond: '👑 钻石',
+  };
+  return labels[tier] || tier;
+}
+
+/** Color a string by tier */
+export function tierColor(tier: string, text: string): string {
+  switch (tier) {
+    case 'diamond': return chalk.cyan.bold(text);
+    case 'platinum': return chalk.magenta(text);
+    case 'gold': return chalk.yellow(text);
+    case 'silver': return chalk.white(text);
+    case 'bronze': return chalk.gray(text);
+    default: return text;
+  }
+}
+
+/** Format XP as a simple number */
+export function formatXp(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K XP`;
+  return `${n} XP`;
+}
+
+/** Draw an XP level bar */
+export function levelBar(currentXp: number, xpToNext: number, width: number = 20): string {
+  const total = currentXp + xpToNext;
+  if (total === 0) return chalk.gray('░'.repeat(width));
+  const filled = Math.round((currentXp / total) * width);
+  const empty = width - filled;
+  return chalk.yellow('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
+}

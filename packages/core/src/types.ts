@@ -114,14 +114,34 @@ export interface WeekStats {
   session_count: number;
 }
 
-/** Achievement definition — Phase 2 placeholder */
+// ── Achievement System ──────────────────────────────────
+
+/** Achievement tier — controls icon and prestige */
+export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
+/** Whether the achievement criteria is shown to the user */
+export type AchievementVisibility = 'visible' | 'hidden';
+
+/** Category expanded for tiered system */
+export type AchievementCategory =
+  | 'token_volume'
+  | 'daily_volume'
+  | 'streak'
+  | 'model_variety'
+  | 'project'
+  | 'efficiency';
+
+/** Achievement definition */
 export interface AchievementDef {
   id: string;
   name: string;
   description: string;
-  category: 'token_volume' | 'streak' | 'model_variety' | 'project' | 'efficiency';
+  category: AchievementCategory;
   criteria: AchievementCriteria;
   icon: string;
+  tier: AchievementTier;
+  visibility: AchievementVisibility;
+  xpReward: number; // XP awarded on first unlock
 }
 
 /** Criteria for unlocking an achievement */
@@ -131,7 +151,9 @@ export type AchievementCriteria =
   | { type: 'model_count'; count: number }
   | { type: 'single_day_volume'; tokens: number }
   | { type: 'project_count'; count: number }
-  | { type: 'cache_hit_rate'; ratio: number };
+  | { type: 'cache_hit_rate'; ratio: number }
+  | { type: 'message_count'; count: number }
+  | { type: 'language_count'; count: number };
 
 /** Unlocked achievement record */
 export interface UserAchievement {
@@ -146,12 +168,15 @@ export interface AchievementEvalResult {
   achievementId: string;
   name: string;
   description: string;
-  category: AchievementDef['category'];
+  category: AchievementCategory;
   icon: string;
+  tier: AchievementTier;
+  visibility: AchievementVisibility;
+  xpReward: number;
   progress: number; // 0.0 to 1.0
   isNewlyUnlocked: boolean;
-  unlockedAt: string | null; // ISO timestamp when unlocked, null if still in-progress
-  metadata?: Record<string, unknown>; // extra context (e.g., streak days, model count)
+  unlockedAt: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 /** Aggregated result from evaluateAll() */
@@ -160,4 +185,66 @@ export interface EvaluateAllResult {
   newlyUnlocked: AchievementEvalResult[];
   totalAchievements: number;
   totalUnlocked: number;
+  totalVisible: number;
+  unlockedVisible: number;
+  xpEarned: number;
+  level: LevelInfo;
+}
+
+// ── XP & Level System ───────────────────────────────────
+
+/** Level and XP information */
+export interface LevelInfo {
+  level: number;
+  currentXp: number;
+  xpToNext: number;
+  totalXp: number;
+  title: string;
+}
+
+/** A recorded XP event */
+export interface XpEvent {
+  id?: number;
+  timestamp: string;
+  source: 'achievement' | 'mission' | 'token_bonus' | 'surprise';
+  amount: number;
+  description: string;
+  metadata?: string;
+}
+
+// ── Weekly Missions ─────────────────────────────────────
+
+/** A weekly mission definition */
+export interface WeeklyMission {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  criteria: AchievementCriteria;
+  xpReward: number;
+}
+
+/** Active mission with progress tracked */
+export interface ActiveMission {
+  missionId: string;
+  weekStart: string; // Monday date
+  weekEnd: string;
+  name: string;
+  description: string;
+  icon: string;
+  xpReward: number;
+  progress: number; // 0.0 to 1.0
+  completed: boolean;
+}
+
+// ── Streak State ────────────────────────────────────────
+
+/** Streak tracking with protection mechanics */
+export interface StreakState {
+  currentStreak: number;
+  longestStreak: number;
+  freezesUsed: number;
+  freezesAvailable: number;
+  lastActiveDate: string | null;
+  streakAnchor: number; // permanent floor after 30-day streak
 }

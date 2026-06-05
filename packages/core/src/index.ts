@@ -18,7 +18,27 @@ export { getModelBreakdown } from './query/models.js';
 export { getProjectBreakdown } from './query/projects.js';
 
 // Achievements
-export { seedAchievements, loadDefinitions, evaluateAll } from './achievements/index.js';
+export {
+  seedAchievements,
+  loadDefinitions,
+  countVisible,
+  evaluateAll,
+  runEvaluator,
+  getCurrentLevel,
+  getTotalXp,
+  getRecentXp,
+  getLevelInfo,
+  awardXp,
+  getStreakState,
+  updateStreakState,
+  getActiveDates,
+  calcCurrentStreak,
+  calcLongestStreak,
+  ensureMissions,
+  getActiveMissions,
+  completeMission,
+  pickWeeklyMissions,
+} from './achievements/index.js';
 
 // Types
 export type {
@@ -35,4 +55,12 @@ export type {
   UserAchievement,
   AchievementEvalResult,
   EvaluateAllResult,
+  AchievementTier,
+  AchievementVisibility,
+  AchievementCategory,
+  LevelInfo,
+  XpEvent,
+  WeeklyMission,
+  ActiveMission,
+  StreakState,
 } from './types.js';
