@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import chalk from 'chalk';
 import { getDb, evaluateAll, getActiveMissions, getCurrentLevel, closeDb } from '@achievements/core';
 import type { EvaluateAllResult, AchievementEvalResult, LevelInfo, ActiveMission } from '@achievements/core';
@@ -106,21 +108,40 @@ function printCelebration(newlyUnlocked: AchievementEvalResult[]): void {
 function sendNotifications(newlyUnlocked: AchievementEvalResult[]): void {
   if (process.platform !== 'darwin') return;
 
-  const notifierApp = `${process.env.HOME}/.achievements/AchievementsNotifier.app`;
+  const notifierDir = `${homedir()}/.achievements`;
+  const notifierApp = `${notifierDir}/AchievementsNotifier.app`;
+
+  // Auto-create the notifier app on first run
+  if (!existsSync(notifierApp)) {
+    try {
+      mkdirSync(notifierDir, { recursive: true });
+      const script = `on run
+  set t to system attribute "NOTIFY_TITLE"
+  set b to system attribute "NOTIFY_BODY"
+  if t is not missing value and b is not missing value then
+    display notification b with title t sound name "Glass"
+  end if
+end run`;
+      const scriptPath = `/tmp/ach-notifier.applescript`;
+      writeFileSync(scriptPath, script);
+      execSync(`osacompile -o '${notifierApp}' '${scriptPath}'`, { timeout: 5000, stdio: 'ignore' });
+    } catch { /* fall back to osascript below */ }
+  }
 
   for (const a of newlyUnlocked) {
     const title = `${a.icon} 成就解锁：${a.name}`;
     const body = a.description;
     try {
-      // Use compiled applet as sender so clicking notification doesn't open Script Editor
-      execSync(
-        `open "${notifierApp}" --args '${title.replace(/'/g, "'\\''")}' '${body.replace(/'/g, "'\\''")}'`,
-        { timeout: 5000, stdio: 'ignore' }
-      );
+      if (existsSync(notifierApp)) {
+        // Pass via env vars — clicking notification opens our app (silent), not Script Editor
+        execSync(`NOTIFY_TITLE='${title}' NOTIFY_BODY='${body}' open '${notifierApp}'`, { timeout: 5000, stdio: 'ignore' });
+      } else {
+        execSync(`osascript -e 'display notification "${body}" with title "${title}" sound name "Glass"'`, { timeout: 3000, stdio: 'ignore' });
+      }
     } catch { /* ignore */ }
   }
 
-  // Play sound
+  // Play celebratory sound
   try {
     execSync('afplay /System/Library/Sounds/Glass.aiff', { timeout: 3000, stdio: 'ignore' });
   } catch { /* ignore */ }
