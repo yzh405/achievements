@@ -17,6 +17,9 @@ export { getWeeklyStats, getWeekStats } from './query/weekly.js';
 export { getModelBreakdown } from './query/models.js';
 export { getProjectBreakdown } from './query/projects.js';
 
+// Achievements
+export { seedAchievements, loadDefinitions, evaluateAll } from './achievements/index.js';
+
 // Types
 export type {
   TokenUsageRecord,
@@ -30,4 +33,6 @@ export type {
   AchievementDef,
   AchievementCriteria,
   UserAchievement,
+  AchievementEvalResult,
+  EvaluateAllResult,
 } from './types.js';

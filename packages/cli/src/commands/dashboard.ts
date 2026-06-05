@@ -1,7 +1,8 @@
 import chalk from 'chalk';
-import { getDb, getOverallStats, getDailyStats, getModelBreakdown, closeDb } from '@achievements/core';
+import { getDb, getOverallStats, getDailyStats, getModelBreakdown, evaluateAll, closeDb } from '@achievements/core';
+import type { EvaluateAllResult } from '@achievements/core';
 import { formatNumber } from '../display/format.js';
-import { renderDailyTable, renderModelTable } from '../display/table.js';
+import { renderDailyTable, renderModelTable, renderAchievementSummary } from '../display/table.js';
 
 export interface DashboardOptions {
   period?: string;
@@ -41,6 +42,21 @@ export function dashboardCommand(options: DashboardOptions): void {
     const models = getModelBreakdown(db);
     console.log(chalk.bold('  By Model'));
     console.log(renderModelTable(models));
+
+    // Achievement progress summary
+    const achResult: EvaluateAllResult = evaluateAll(db);
+    const inProgress = achResult.results
+      .filter((r) => r.unlockedAt === 'in-progress' || r.unlockedAt === null)
+      .filter((r) => r.progress > 0)
+      .sort((a, b) => b.progress - a.progress);
+    const nextAch = inProgress.length > 0 ? inProgress[0] : null;
+    console.log('');
+    console.log(`  ${renderAchievementSummary(
+      achResult.totalUnlocked,
+      achResult.totalAchievements,
+      nextAch ? nextAch.name : null,
+      nextAch ? nextAch.progress : null
+    )}`);
 
     console.log(chalk.gray(`\n  💡 Run ${chalk.white('achievements ingest')} to refresh data.\n`));
   } finally {

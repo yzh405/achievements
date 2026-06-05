@@ -9,6 +9,7 @@ import { modelsCommand } from './commands/models.js';
 import { projectsCommand } from './commands/projects.js';
 import { addCommand } from './commands/add.js';
 import { statsCommand } from './commands/stats.js';
+import { listCommand, checkCommand } from './commands/achievements.js';
 
 const program = new Command();
 
@@ -80,6 +81,26 @@ program
   .command('stats')
   .description('Quick summary of all-time token usage')
   .action(() => statsCommand());
+
+// Achievements command
+const achievementsCmd = program
+  .command('achievements')
+  .description('View and check achievements');
+
+achievementsCmd
+  .command('list')
+  .description('Show all achievements with progress')
+  .action(() => listCommand());
+
+achievementsCmd
+  .command('check')
+  .description('Evaluate all achievements and check for new unlocks')
+  .option('--notify', 'Send macOS desktop notification for each new unlock')
+  .option('--quiet', 'Suppress table output; print only on new unlocks')
+  .action((options) => checkCommand({ notify: options.notify, quiet: options.quiet }));
+
+// Default: achievements list
+achievementsCmd.action(() => listCommand());
 
 // Also support "today" as an alias for daily with today's date
 program

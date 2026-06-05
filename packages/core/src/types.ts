@@ -130,7 +130,8 @@ export type AchievementCriteria =
   | { type: 'daily_streak'; days: number }
   | { type: 'model_count'; count: number }
   | { type: 'single_day_volume'; tokens: number }
-  | { type: 'project_count'; count: number };
+  | { type: 'project_count'; count: number }
+  | { type: 'cache_hit_rate'; ratio: number };
 
 /** Unlocked achievement record */
 export interface UserAchievement {
@@ -138,4 +139,25 @@ export interface UserAchievement {
   unlocked_at: string;
   progress: number; // 0.0 to 1.0
   metadata?: Record<string, unknown>;
+}
+
+/** Result of evaluating a single achievement */
+export interface AchievementEvalResult {
+  achievementId: string;
+  name: string;
+  description: string;
+  category: AchievementDef['category'];
+  icon: string;
+  progress: number; // 0.0 to 1.0
+  isNewlyUnlocked: boolean;
+  unlockedAt: string | null; // ISO timestamp when unlocked, null if still in-progress
+  metadata?: Record<string, unknown>; // extra context (e.g., streak days, model count)
+}
+
+/** Aggregated result from evaluateAll() */
+export interface EvaluateAllResult {
+  results: AchievementEvalResult[];
+  newlyUnlocked: AchievementEvalResult[];
+  totalAchievements: number;
+  totalUnlocked: number;
 }

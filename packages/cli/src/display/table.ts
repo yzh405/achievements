@@ -1,7 +1,7 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
-import type { DayStats, ModelBreakdown, ProjectBreakdown, WeekStats } from '@achievements/core';
-import { formatNumber, formatDate, formatTokens, barChart } from './format.js';
+import type { DayStats, ModelBreakdown, ProjectBreakdown, WeekStats, AchievementEvalResult } from '@achievements/core';
+import { formatNumber, formatDate, formatTokens, barChart, progressBar, achievementStatusIcon } from './format.js';
 
 /**
  * Render a daily stats table.
@@ -118,4 +118,68 @@ export function renderProjectTable(projects: ProjectBreakdown[]): string {
   }
 
   return table.toString();
+}
+
+/**
+ * Render achievements grouped by category with progress bars.
+ */
+export function renderAchievementTable(achievements: AchievementEvalResult[]): string {
+  if (achievements.length === 0) return chalk.gray('  No achievements found.\n');
+
+  const categoryLabels: Record<string, string> = {
+    token_volume: '📊 Token Volume',
+    streak: '🔥 Streaks',
+    model_variety: '🔍 Model Variety',
+    project: '📁 Projects',
+    efficiency: '⚡ Efficiency',
+  };
+
+  const grouped = new Map<string, AchievementEvalResult[]>();
+  for (const a of achievements) {
+    const list = grouped.get(a.category) || [];
+    list.push(a);
+    grouped.set(a.category, list);
+  }
+
+  const table = new Table({
+    head: ['', 'Achievement', 'Progress', 'Status'],
+    style: { head: ['cyan'] },
+    colWidths: [4, 20, 28, 8],
+    wordWrap: true,
+  });
+
+  for (const [category, items] of grouped) {
+    table.push([{ colSpan: 4, content: chalk.bold.cyan(categoryLabels[category] || category) }]);
+    for (const a of items) {
+      const status = achievementStatusIcon(a.isNewlyUnlocked, a.progress, a.unlockedAt);
+      const name = a.unlockedAt !== null && a.unlockedAt !== 'in-progress'
+        ? chalk.green(a.name)
+        : chalk.white(a.name);
+      const desc = chalk.gray(`  ${a.description}`);
+      table.push([
+        a.icon,
+        `${name}\n${desc}`,
+        progressBar(a.progress),
+        status,
+      ]);
+    }
+  }
+
+  return table.toString();
+}
+
+/**
+ * Render a compact achievement summary line for the dashboard.
+ */
+export function renderAchievementSummary(
+  totalUnlocked: number,
+  totalAchievements: number,
+  nextName: string | null,
+  nextProgress: number | null
+): string {
+  const summary = `🏆 Achievements: ${chalk.bold(`${totalUnlocked}/${totalAchievements}`)} unlocked`;
+  if (nextName && nextProgress !== null) {
+    return `${summary}  |  ${chalk.gray('🔜 Next:')} ${chalk.cyan(nextName)} (${Math.round(nextProgress * 100)}%)`;
+  }
+  return summary;
 }
